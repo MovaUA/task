@@ -1,3 +1,6 @@
+# IDE
+**/.vscode
+
 # Binaries for programs and plugins
 *.exe
 *.dll
@@ -14,5 +17,5 @@
 .glide/
 
 tmp/*
-task
-tasks.db
+/task
+/tasks.db
