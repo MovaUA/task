@@ -17,36 +17,33 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/movaua/task/pkg/model"
+	"github.com/movaua/task/pkg/store"
 	"github.com/spf13/cobra"
 )
+
+var doCmdID uint64
 
 // doCmd represents the do command
 var doCmd = &cobra.Command{
 	Use:   "do",
 	Short: "Mark a task on your TODO list as complete",
-	// 	Long: `A longer description that spans multiple lines and likely contains examples
-	// and usage of using your command. For example:
-
-	// Cobra is a CLI library for Go that empowers applications.
-	// This application is a tool to generate the needed files
-	// to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("do called")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		s, err := store.New(dbFile)
+		if err != nil {
+			return err
+		}
+		t, err := s.Read(doCmdID)
+		if err != nil {
+			return err
+		}
+		t.State = model.Task_DONE
+		return s.Update(t)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(doCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// doCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// doCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	doCmd.Flags().Uint64VarP(&doCmdID, "id", "i", 0, "id of the task to mark as complete")
 }

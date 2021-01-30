@@ -17,23 +17,36 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"fmt"
+	"errors"
+	"strings"
 
+	"github.com/movaua/task/pkg/model"
+	"github.com/movaua/task/pkg/store"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a new task to your TODO list",
-	// 	Long: `A longer description that spans multiple lines and likely contains examples
-	// and usage of using your command. For example:
-
-	// Cobra is a CLI library for Go that empowers applications.
-	// This application is a tool to generate the needed files
-	// to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("add called")
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return errors.New("provide a task to add")
+		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		task := model.Task{
+			Name:    strings.Join(args, " "),
+			State:   model.Task_TODO,
+			Created: timestamppb.Now(),
+		}
+		s, err := store.New(dbFile)
+		if err != nil {
+			return err
+		}
+		return s.Create(&task)
 	},
 }
 

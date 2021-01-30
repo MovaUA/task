@@ -24,13 +24,17 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	dbFile  string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -65,6 +69,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.task.yaml)")
+	rootCmd.PersistentFlags().StringVar(&dbFile, "db", "", "db file (default is $HOME/.task.db)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -94,5 +99,16 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+
+	if dbFile == "" {
+		// Find home directory.
+		home, err := os.Hostname()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		dbFile = path.Join(home, ".task.db")
 	}
 }

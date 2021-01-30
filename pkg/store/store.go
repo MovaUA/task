@@ -20,14 +20,16 @@ var (
 // Store interacts with persistent storage
 type Store interface {
 	Close() error
+	Create(task *model.Task) error
 	Read(id uint64) (*model.Task, error)
 	Update(task *model.Task) error
+	Delete(id uint64) error
 	List() ([]*model.Task, error)
 }
 
 // New creates Store
 func New(filename string) (Store, error) {
-	db, err := bolt.Open(filename, 600, &bolt.Options{
+	db, err := bolt.Open(filename, 0600, &bolt.Options{
 		Timeout: time.Second,
 	})
 	if err != nil {
@@ -35,7 +37,7 @@ func New(filename string) (Store, error) {
 	}
 
 	if err := db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucket(bucket)
+		_, err := tx.CreateBucketIfNotExists(bucket)
 		if err != nil {
 			return fmt.Errorf("create bucket: %w", err)
 		}
@@ -55,30 +57,7 @@ func (s *storage) Close() error {
 	return s.db.Close()
 }
 
-func (s *storage) Read(id uint64) (*model.Task, error) {
-	var task model.Task
-
-	if err := s.db.View(func(tx *bolt.Tx) error {
-		// Assume bucket exists and has keys
-		b := tx.Bucket(bucket)
-
-		c := b.Cursor()
-
-		id := itob(id)
-		k, v := c.Seek(id)
-		if bytes.Compare(k, id) != 0 {
-			return errors.New("task is not found")
-		}
-
-		return proto.Unmarshal(v, &task)
-	}); err != nil {
-		return nil, err
-	}
-
-	return &task, nil
-}
-
-func (s *storage) Update(task *model.Task) error {
+func (s *storage) Create(task *model.Task) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		// Retrieve the tasks bucket.
 		// This should be created when the DB is first opened.
@@ -97,6 +76,50 @@ func (s *storage) Update(task *model.Task) error {
 
 		// Persist bytes to tasks bucket.
 		return b.Put(itob(task.Id), buf)
+	})
+}
+
+func (s *storage) Read(id uint64) (*model.Task, error) {
+	var task model.Task
+
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket(bucket)
+
+		c := b.Cursor()
+
+		id := itob(id)
+		k, v := c.Seek(id)
+		if bytes.Compare(k, id) != 0 {
+			return errors.New("read: task is not found")
+		}
+
+		return proto.Unmarshal(v, &task)
+	}); err != nil {
+		return nil, err
+	}
+
+	return &task, nil
+}
+
+func (s *storage) Update(task *model.Task) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+
+		buf, err := proto.Marshal(task)
+		if err != nil {
+			return err
+		}
+
+		return b.Put(itob(task.Id), buf)
+	})
+}
+
+func (s *storage) Delete(id uint64) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		id := itob(id)
+		return b.Delete(id)
 	})
 }
 

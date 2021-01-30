@@ -17,4 +17,4 @@
 .glide/
 
 /task
-/tasks.db
+/.task.db

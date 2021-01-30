@@ -17,8 +17,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
+	"os"
 
+	"github.com/movaua/task/pkg/store"
 	"github.com/spf13/cobra"
 )
 
@@ -26,14 +28,21 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all of your incomplete tasks",
-	// 	Long: `A longer description that spans multiple lines and likely contains examples
-	// and usage of using your command. For example:
+	RunE: func(cmd *cobra.Command, args []string) error {
+		s, err := store.New(dbFile)
+		if err != nil {
+			return err
+		}
 
-	// Cobra is a CLI library for Go that empowers applications.
-	// This application is a tool to generate the needed files
-	// to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
+		tasks, err := s.List()
+		if err != nil {
+			return err
+		}
+
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+
+		return enc.Encode(tasks)
 	},
 }
 
